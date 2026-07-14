@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цифровой двойник — персональная система знаний на LLM-агентах</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%230d1117' stroke='%2358a6ff'/><circle cx='8' cy='8' r='3' fill='%233fb950'/></svg>">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0d1117; --panel:#161b22; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e;
+  --src:#8b949e; --agent:#8957e5; --agent-t:#c9a5ff;
+  --kb:#3fb950; --kb-t:#7ee787; --iface:#58a6ff; --iface-t:#79c0ff;
+  --mono:Consolas,'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6}
+nav{position:fixed;top:0;left:0;right:0;z-index:10;background:rgba(13,17,23,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+nav .inner{max-width:1100px;margin:0 auto;display:flex;gap:4px;align-items:center;padding:10px 20px;overflow-x:auto}
+nav .brand{font-family:var(--mono);color:var(--iface-t);margin-right:auto;white-space:nowrap;font-size:14px}
+nav a{color:var(--muted);text-decoration:none;font-size:14px;padding:6px 12px;border-radius:6px;white-space:nowrap}
+nav a:hover{color:var(--text);background:var(--panel)}
+nav a.active{color:var(--iface-t);background:var(--panel)}
+main{max-width:1100px;margin:0 auto;padding:80px 20px 60px}
+section{padding:48px 0;border-bottom:1px solid var(--border);scroll-margin-top:56px}
+section:last-child{border-bottom:none}
+h1{font-size:clamp(19px,2.4vw,27px);line-height:1.4;font-weight:600}
+.hero h1 .line{display:block;margin-bottom:10px}
+.hero h1 .accent{color:var(--iface-t)}
+h2{font-size:26px;margin-bottom:8px}
+h2::before{content:'// ';color:var(--iface);font-family:var(--mono)}
+.kicker{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:24px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code,.mono{font-family:var(--mono);font-size:.92em;color:var(--iface-t)}
+.hero{padding:56px 0 8px}
+.hero .sub{color:var(--muted);font-size:18px;margin-top:14px;max-width:760px}
+.theses{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:28px}
+.thesis{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px}
+.thesis .n{font-family:var(--mono);color:var(--iface);font-size:13px}
+.thesis h3{font-size:16px;margin:6px 0 6px}
+.thesis p{font-size:14px;color:var(--muted)}
+footer{max-width:1100px;margin:0 auto;padding:24px 20px;color:var(--muted);font-size:13px;font-family:var(--mono)}
+.diagram{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:20px}
+.col-label{font-family:var(--mono);font-size:11px;fill:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.flow{stroke:var(--iface);stroke-width:1.4;fill:none;opacity:.45;transition:opacity .2s,stroke-width .2s}
+.flow.hl{opacity:1;stroke-width:2.2}
+.node{cursor:pointer}
+.node rect{transition:filter .2s}
+.node.hl rect{filter:drop-shadow(0 0 6px currentColor)}
+.dot{fill:var(--iface-t)}
+.diagram-tip{min-height:44px;margin-top:10px;font-size:14px;color:var(--muted);font-family:var(--mono)}
+.lesson{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--panel);overflow:hidden}
+.lesson summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px;cursor:pointer;list-style:none}
+.lesson summary::-webkit-details-marker{display:none}
+.lesson summary .prob{color:var(--text)}
+.lesson summary .sol{color:var(--kb-t)}
+.lesson .detail{padding:0 16px 14px;color:var(--muted);font-size:14px}
+.lesson[open]{border-color:var(--iface)}
+.lessons-head{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 8px;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav><div class="inner">
+  <span class="brand">digital-twin</span>
+  <a href="#idea">Замысел</a>
+  <a href="#architecture">Архитектура</a>
+  <a href="#lessons">Подводные камни</a>
+  <a href="#stack">Технологии</a>
+  <a href="#roadmap">Планы</a>
+</div></nav>
+<main>
+  <section id="idea">
+    <div class="hero">
+      <h1>
+      <span class="line">Самое ценное знание о себе вы уже давно извлекли.</span>
+      <span class="line">Но почти наверняка забыли уже гораздо больше, чем когда-либо знали.</span>
+      <span class="line accent">Потому и не используете в работе.</span>
+      <span class="line accent">Настало время это исправить!</span>
+    </h1>
+      <p class="sub">Цифровой двойник — персональная система знаний на LLM-агентах. Она собирает всё, что я когда-либо счёл важным, связывает между собой и возвращает в момент, когда это нужно для решения.</p>
+    </div>
+    <h2>Замысел</h2>
+    <p class="kicker">почему это вообще нужно строить</p>
+    <div class="theses">
+      <div class="thesis"><span class="n">01</span><h3>Слепота к себе</h3><p>Человек не двигается к лучшему не из-за нехватки фактов, а потому что не видит, что это возможно лично ему. Это дыра не в знаниях, а в доступе к себе.</p></div>
+      <div class="thesis"><span class="n">02</span><h3>Узкий горизонт сознания</h3><p>Выстраданные выводы — что важно, что зажигает, чего делать не буду — забываются к моменту решения. В момент выбора их «нет в комнате».</p></div>
+      <div class="thesis"><span class="n">03</span><h3>Прообраз: Цеттелькастен</h3><p>Картотека Лумана порождала новое знание за счёт связей между заметками. Проблема одна: руками это адски муторно, и почти никто не доводит до конца.</p></div>
+      <div class="thesis"><span class="n">04</span><h3>LLM снимает ручной труд</h3><p>Связывание и синтез больше не надо делать руками. Модель неутомимо перебирает базу, ищет пересечения, сводит мысли из разных лет и областей.</p></div>
+      <div class="thesis"><span class="n">05</span><h3>Подсказывает забытое</h3><p>Система сама возвращает то, что ты знаешь, но забыл: цепочку возможностей к цели — или противоречие решения твоим же ценностям.</p></div>
+      <div class="thesis"><span class="n">06</span><h3>Дисциплина доверия (из ИБ)</h3><p>Двойник не пишет в базу без моего «да». Каждый вывод прослеживается до источника. Ценность — в курируемой базе, а не в заменяемой модели.</p></div>
+    </div>
+  </section>
+  <section id="architecture">
+    <h2>Архитектура</h2>
+    <p class="kicker">путь данных: источники → агенты → база знаний → интерфейсы</p>
+    <div class="diagram">
+      <svg id="flow-svg" viewBox="0 0 1060 560" xmlns="http://www.w3.org/2000/svg">
+        <text x="20" y="26" class="col-label">Источники</text>
+        <text x="300" y="26" class="col-label">Агенты</text>
+        <text x="600" y="26" class="col-label">Хранилище</text>
+        <text x="850" y="26" class="col-label">Интерфейсы</text>
+
+        <g class="flow-layer">
+          <path class="flow" data-from="telegram" data-to="meatgrinder" d="M220,82 C260,82 260,62 300,62"/>
+          <path class="flow" data-from="telegram" data-to="values" d="M220,82 C270,82 270,494 300,494"/>
+          <path class="flow" data-from="notes" data-to="wikibuilder" d="M220,202 C260,202 260,134 300,134"/>
+          <path class="flow" data-from="web" data-to="scout" d="M220,322 C260,322 260,422 300,422"/>
+
+          <path class="flow" data-from="meatgrinder" data-to="kb" d="M510,62 C560,62 560,220 600,220"/>
+          <path class="flow" data-from="wikibuilder" data-to="kb" d="M510,134 C560,134 560,240 600,240"/>
+          <path class="flow" data-from="nightly" data-to="kb" d="M510,206 C560,206 560,260 600,260"/>
+          <path class="flow" data-from="gardener" data-to="kb" d="M510,278 C560,278 560,280 600,280"/>
+          <path class="flow" data-from="weekly" data-to="kb" d="M510,350 C560,350 560,300 600,300"/>
+          <path class="flow" data-from="scout" data-to="kb" d="M510,422 C560,422 560,320 600,320"/>
+          <path class="flow" data-from="values" data-to="kb" d="M510,494 C560,494 560,340 600,340"/>
+
+          <path class="flow" data-from="kb" data-to="tgbot" d="M800,220 C830,220 830,108 850,108"/>
+          <path class="flow" data-from="kb" data-to="mcp" d="M800,260 C825,260 825,242 850,242"/>
+          <path class="flow" data-from="weekly" data-to="tgbot" d="M510,350 C700,350 760,108 850,108"/>
+          <path class="flow" data-from="kb" data-to="gtd" d="M800,340 C825,340 825,362 850,362"/>
+        </g>
+
+        <g class="node" data-node="telegram">
+          <rect x="20" y="60" width="200" height="44" rx="8" stroke="var(--src)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="120" y="86" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Telegram-избранное</text>
+        </g>
+        <g class="node" data-node="notes">
+          <rect x="20" y="180" width="200" height="44" rx="8" stroke="var(--src)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="120" y="206" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Заметки и книги</text>
+        </g>
+        <g class="node" data-node="web">
+          <rect x="20" y="300" width="200" height="44" rx="8" stroke="var(--src)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="120" y="326" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Веб-поиск (Tavily)</text>
+        </g>
+
+        <g class="node" data-node="meatgrinder">
+          <rect x="300" y="40" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="66" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Мясорубка</text>
+        </g>
+        <g class="node" data-node="wikibuilder">
+          <rect x="300" y="112" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="138" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Вики-строитель</text>
+        </g>
+        <g class="node" data-node="nightly">
+          <rect x="300" y="184" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="210" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Nightly-синтез</text>
+        </g>
+        <g class="node" data-node="gardener">
+          <rect x="300" y="256" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="282" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Wiki gardener</text>
+        </g>
+        <g class="node" data-node="weekly">
+          <rect x="300" y="328" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="354" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Weekly review</text>
+        </g>
+        <g class="node" data-node="scout">
+          <rect x="300" y="400" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="426" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Research scout</text>
+        </g>
+        <g class="node" data-node="values">
+          <rect x="300" y="472" width="210" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="405" y="498" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--agent-t)">Слой ценностей</text>
+        </g>
+
+        <g class="node" data-node="kb">
+          <rect x="600" y="180" width="200" height="200" rx="8" stroke="var(--kb)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="700" y="216" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">База знаний</text>
+          <text x="700" y="284" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--kb-t)">Qdrant (векторы)</text>
+          <text x="700" y="312" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--kb-t)">Markdown-вики</text>
+        </g>
+
+        <g class="node" data-node="tgbot">
+          <rect x="850" y="80" width="190" height="56" rx="8" stroke="var(--iface)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="945" y="104" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--iface-t)">Telegram-бот</text>
+          <text x="945" y="122" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">(Hermes, VPS)</text>
+        </g>
+        <g class="node" data-node="mcp">
+          <rect x="850" y="220" width="190" height="44" rx="8" stroke="var(--iface)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="945" y="246" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--iface-t)">MCP → Claude Code</text>
+        </g>
+        <g class="node" data-node="gtd">
+          <rect x="850" y="340" width="190" height="44" rx="8" stroke="var(--iface)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="945" y="366" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--iface-t)">GTD Nirvana</text>
+        </g>
+      </svg>
+      <div class="diagram-tip">Наведите на блок, чтобы увидеть его роль и потоки.</div>
+    </div>
+    <h3 style="margin-top:36px;font-size:18px">Откуда берётся знание и как связано</h3>
+    <div class="diagram">
+      <svg id="prov-svg" viewBox="0 0 1060 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="prov-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" opacity=".7"/>
+          </marker>
+        </defs>
+
+        <!-- Chain 1: y≈40 -->
+        <g class="node">
+          <rect x="20" y="20" width="190" height="44" rx="8" stroke="var(--src)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="115" y="46" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Сообщение в избранном</text>
+        </g>
+        <path d="M210,42 L365,42" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+        <text x="288" y="34" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">мясорубка</text>
+
+        <g class="node">
+          <rect x="370" y="20" width="180" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="460" y="46" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Эпизод ценностей</text>
+        </g>
+        <path d="M550,42 L705,42" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+        <text x="628" y="34" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">reflect</text>
+
+        <g class="node">
+          <rect x="710" y="20" width="180" height="44" rx="8" stroke="var(--agent)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="800" y="46" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Домен ценностей</text>
+        </g>
+
+        <!-- Chain 2: y≈140 -->
+        <g class="node">
+          <rect x="150" y="120" width="200" height="44" rx="8" stroke="var(--kb)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="250" y="146" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Вики-страница</text>
+        </g>
+        <path d="M355,132 L695,132" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+        <path d="M695,152 L355,152" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+        <text x="525" y="118" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="var(--muted)">[inferred] связи от wiki gardener</text>
+
+        <g class="node">
+          <rect x="700" y="120" width="200" height="44" rx="8" stroke="var(--kb)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="800" y="146" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Вики-страница</text>
+        </g>
+
+        <!-- Chain 3: y≈240 -->
+        <g class="node">
+          <rect x="20" y="220" width="190" height="44" rx="8" stroke="var(--iface)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="115" y="246" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Фрагмент ответа</text>
+        </g>
+        <path d="M210,242 L385,242" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+
+        <g class="node">
+          <rect x="390" y="222" width="130" height="40" rx="20" stroke="var(--iface)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="455" y="246" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="var(--text)">source_ref</text>
+        </g>
+        <path d="M520,242 L705,242" stroke="var(--muted)" stroke-width="1.4" opacity=".7" fill="none" marker-end="url(#prov-arrow)"/>
+
+        <g class="node">
+          <rect x="710" y="220" width="330" height="44" rx="8" stroke="var(--src)" fill="var(--panel)" stroke-width="1.4"/>
+          <text x="875" y="246" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)">Первоисточник (сообщение / страница)</text>
+        </g>
+      </svg>
+    </div>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">Каждый факт в базе несёт пометку происхождения: <code>[inferred]</code> — вывод модели, <code>[ambiguous]</code> — требует подтверждения, <code>source_ref</code> — ссылка на первоисточник.</p>
+    <h3 style="margin-top:36px;font-size:18px">Агенты и расписание</h3>
+    <div class="panel" style="margin-top:14px;padding:0">
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Агент</th><th>Расписание</th><th>Что делает</th><th>Что отдаёт</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Мясорубка</td><td>ежедневно 03:00</td><td>разбирает Telegram-избранное, оценивает и обогащает идеи</td><td>записи в базу знаний + дайджест</td></tr>
+            <tr><td class="mono">Вики-строитель</td><td>по мере поступления</td><td>строит вики-страницы из входящих материалов</td><td>новые страницы вики</td></tr>
+            <tr><td class="mono">Nightly-синтез</td><td>каждую ночь 03:00</td><td>ищет мосты между свежими и старыми знаниями</td><td>инсайты с пометкой [inferred]</td></tr>
+            <tr><td class="mono">Wiki gardener</td><td>раз в 3 дня 04:00</td><td>перечитывает вики-страницы, находит новые взаимосвязи</td><td>обновлённые секции + дайджест</td></tr>
+            <tr><td class="mono">Weekly review</td><td>еженедельно, утро</td><td>сверяет цели, проекты и прогресс недели</td><td>обзор + research-офферы</td></tr>
+            <tr><td class="mono">Research scout</td><td>по офферу из weekly</td><td>внешний поиск по дереву целей (Tavily) с гейтом новизны</td><td>только то, чего ещё нет в базе</td></tr>
+            <tr><td class="mono">Слой ценностей</td><td>по мере накопления</td><td>извлекает эпизоды решений, синтезирует домены ценностей</td><td>модель принятия решений</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section id="lessons">
+    <h2>Подводные камни → фичи</h2>
+    <p class="kicker">каждая фича выросла из реальной проблемы — кликните строку</p>
+    <div class="lessons-head"><span>Проблема</span><span>Решение</span></div>
+    <details class="lesson"><summary><span class="prob">Всё оседает в избранном и не всплывает</span><span class="sol">Мясорубка</span></summary><div class="detail">Агент еженощно разбирает сохранённое в Telegram: оценивает идеи, извлекает суть и кладёт в базу знаний. Отдельно копится список экспериментов «на попробовать» для цифровой осведомлённости.</div></details>
+    <details class="lesson"><summary><span class="prob">Знания без структуры — просто куча текста</span><span class="sol">Вики-заметки с собственными оценками</span></summary><div class="detail">Каждая тема — страница с моим отношением и оценкой, а не нейтральный конспект. База отражает моё мировоззрение, а не интернет.</div></details>
+    <details class="lesson"><summary><span class="prob">Непонятно, откуда взялось знание</span><span class="sol">Provenance-маркеры + source_ref</span></summary><div class="detail">[inferred] — вывод модели, [ambiguous] — требует подтверждения; каждый фрагмент ответа цитирует первоисточник. Привычка из ИБ: не доверять выводу, пока не видно, на чём он основан.</div></details>
+    <details class="lesson"><summary><span class="prob">Знания статичны и устаревают</span><span class="sol">Wiki gardener</span></summary><div class="detail">Раз в 3 дня агент перечитывает страницы, ищет пересечения через векторный поиск, LLM-судья отбирает реальные связи, новые секции дописываются без затирания старого.</div></details>
+    <details class="lesson"><summary><span class="prob">Галлюцинации и подмена моего мнения</span><span class="sol">Явное подтверждение гипотез</span></summary><div class="detail">Я не слепо доверяю ИИ — двойник хранит то, что я сам счёл заслуживающим доверия. Запись в базу только после моего «да».</div></details>
+    <details class="lesson"><summary><span class="prob">Хранилища расползаются</span><span class="sol">Синхронизация через обновление вики</span></summary><div class="detail">Вики — единый источник правды, векторный индекс перестраивается от неё.</div></details>
+    <details class="lesson"><summary><span class="prob">Без действий двойник — красивая игрушка</span><span class="sol">Прямая связь с GTD</span></summary><div class="detail">Задачи двойника уходят в Nirvana (проект Digital Twin). Без процесса работы с задачами система не замыкается на результат.</div></details>
+    <details class="lesson"><summary><span class="prob">Цели дрейфуют незаметно</span><span class="sol">Weekly review</span></summary><div class="detail">Еженедельная сверка целей, проектов и прогресса; анти-повтор через прошлый обзор; офферы на внешний research.</div></details>
+    <details class="lesson"><summary><span class="prob">Нужен доступ 24/7, не только с ноутбука</span><span class="sol">Hermes + Telegram на VPS</span></summary><div class="detail">Двойник живёт на VPS и отвечает в Telegram в любой момент. Там же крутятся все cron-агенты.</div></details>
+    <details class="lesson"><summary><span class="prob">Наработки недоступны при разработке</span><span class="sol">MCP-сервер для Claude Code</span></summary><div class="detail">get_self_snapshot и гранулярные геттеры (профиль, цели, темы, ценности, черновики) — двойник участвует в обсуждении задач прямо в редакторе.</div></details>
+    <details class="lesson"><summary><span class="prob">Советы «в целом правильные», но не мои</span><span class="sol">Слой ценностей</span></summary><div class="detail">Автозахват эпизодов решений → LLM-рефлексия → домены ценностей. Двойник предлагает варианты, к которым я с большой вероятностью склонюсь.</div></details>
+  </section>
+  <section id="stack"><h2>Технологии и инструменты</h2><p class="kicker">каждый слой заменяем — ценность в базе и процессе</p>
+<div class="panel" style="padding:0"><div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Слой</th><th>Инструмент</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td>Язык</td><td class="mono">Python 3</td><td>агенты, MCP-сервер, пайплайны</td></tr>
+      <tr><td>Векторная БД</td><td class="mono">Qdrant + OpenAI text-embedding-3-large (3072-dim)</td><td>семантический поиск по базе знаний</td></tr>
+      <tr><td>LLM</td><td class="mono">DeepSeek через Hermes-профили</td><td>синтез, рефлексия, оценка; модель заменяема</td></tr>
+      <tr><td>Мессенджер</td><td class="mono">Telegram Bot API / Telethon</td><td>интерфейс 24/7 и источник данных</td></tr>
+      <tr><td>Внешний поиск</td><td class="mono">Tavily</td><td>research scout с гейтом новизны</td></tr>
+      <tr><td>Интеграция</td><td class="mono">MCP (Model Context Protocol)</td><td>доступ Claude Code к базе двойника</td></tr>
+      <tr><td>Инфраструктура</td><td class="mono">VPS 1 ГБ RAM + cron</td><td>дисциплина работы в жёстких ограничениях</td></tr>
+      <tr><td>GTD</td><td class="mono">Nirvana</td><td>замыкание знаний на действия</td></tr>
+      <tr><td>Разработка</td><td class="mono">Claude Code + <strong>obra/superpowers</strong></td><td>дисциплинированный цикл: brainstorm → spec → plan → TDD → code review → deploy</td></tr>
+    </tbody>
+  </table>
+</div></div>
+<p style="margin-top:16px;font-size:15px;color:var(--muted);max-width:860px">Каждая фича этого проекта прошла полный цикл: брейншторм с уточняющими вопросами, письменная спека, пошаговый план, разработка через тесты, ревью и деплой на VPS. Навык <span class="mono">obra/superpowers</span> делает этот цикл принудительным — это и есть ответ на вопрос, как не дать ИИ писать код без дисциплины.</p></section>
+  <section id="roadmap"><h2>Планы развития</h2><p class="kicker">что дальше</p>
+<div class="theses">
+  <div class="thesis"><span class="n">01</span><h3>Задачи → Nirvana</h3><p>Достроить OAuth и задеплоить синк задач двойника в GTD.</p></div>
+  <div class="thesis"><span class="n">02</span><h3>Эмбеддинги нового поколения</h3><p>Миграция на Voyage для более точного поиска.</p></div>
+  <div class="thesis"><span class="n">03</span><h3>Проактивность</h3><p>Двойник сам начинает разговор, когда видит противоречие или возможность.</p></div>
+  <div class="thesis"><span class="n">04</span><h3>Масштаб: команда и организация</h3><p>Тот же контур — курируемая база + provenance + подтверждение записи — решает проблему «внедрили ИИ, получили ноль» на уровне компании.</p></div>
+</div></section>
+</main>
+<footer>Сделано в Claude Code · obra/superpowers · 2026</footer>
+<script>
+const links=[...document.querySelectorAll('nav a')];
+// прокрутка кликом: работает и там, где hash-навигация заблокирована (sandbox-превью)
+links.forEach(l=>l.addEventListener('click',e=>{
+  const target=document.querySelector(l.hash);
+  if(target){e.preventDefault();target.scrollIntoView({behavior:'smooth'});}
+}));
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    links.forEach(l=>l.classList.toggle('active',l.hash==='#'+e.target.id));
+  }});
+},{rootMargin:'-40% 0px -55% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>obs.observe(s));
+
+document.querySelectorAll('#flow-svg path.flow').forEach((p,i)=>{
+  const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  dot.setAttribute('r','3'); dot.setAttribute('class','dot');
+  p.parentNode.appendChild(dot);
+  const len=p.getTotalLength(); let t=(i*0.13)%1;
+  (function step(){
+    t=(t+0.0028)%1;
+    const pt=p.getPointAtLength(t*len);
+    dot.setAttribute('cx',pt.x); dot.setAttribute('cy',pt.y);
+    requestAnimationFrame(step);
+  })();
+});
+
+const NODE_DESC={
+  telegram:'Telegram-избранное: сообщения и ссылки, которые я сохраняю как «важное» — сырьё для мясорубки и слоя ценностей.',
+  notes:'Заметки и книги: конспекты и выписки, которые вики-строитель превращает в структурированные страницы.',
+  web:'Веб-поиск (Tavily): внешние источники, которые research scout подтягивает под дерево целей.',
+  meatgrinder:'Мясорубка: разбирает Telegram-избранное — оценивает идеи, извлекает суть, отправляет в базу знаний.',
+  wikibuilder:'Вики-строитель: строит вики-страницы из входящих материалов.',
+  nightly:'Nightly-синтез: ночной синтез мостов между знаниями.',
+  gardener:'Wiki gardener: перечитывает вики и находит новые взаимосвязи.',
+  weekly:'Weekly review: еженедельная сверка целей и прогресса.',
+  scout:'Research scout: внешний поиск по дереву целей с гейтом новизны по базе знаний.',
+  values:'Слой ценностей: извлекает эпизоды решений и синтезирует домены ценностей.',
+  kb:'База знаний: хранит курируемую базу — векторы в Qdrant и markdown-вики.',
+  tgbot:'Telegram-бот: интерфейс 24/7 в Telegram через Hermes на VPS.',
+  mcp:'MCP → Claude Code: доступ из Claude Code к базе двойника.',
+  gtd:'GTD Nirvana: задачи двойника уходят в Nirvana.'
+};
+const tip=document.querySelector('.diagram-tip');
+const defaultTip=tip.textContent;
+document.querySelectorAll('#flow-svg .node').forEach(node=>{
+  const id=node.getAttribute('data-node');
+  node.addEventListener('mouseenter',()=>{
+    node.classList.add('hl');
+    document.querySelectorAll(`#flow-svg path.flow[data-from="${id}"], #flow-svg path.flow[data-to="${id}"]`).forEach(p=>p.classList.add('hl'));
+    tip.textContent=NODE_DESC[id]||defaultTip;
+  });
+  node.addEventListener('mouseleave',()=>{
+    document.querySelectorAll('#flow-svg .hl').forEach(el=>el.classList.remove('hl'));
+    tip.textContent=defaultTip;
+  });
+});
+</script>
+</body>
+</html>
